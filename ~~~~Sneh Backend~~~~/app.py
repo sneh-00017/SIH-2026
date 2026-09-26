@@ -10,14 +10,19 @@ from risk_engine import calculate_risk_from_flags
 from detector import detect_objects_stub
 from safety_pipeline import run_safety_pipeline
 from database import initialize_database, list_analyses, save_analysis
-from sbert_service import MODEL_DIRECTORY, MODEL_NAME, cosine_similarity, embed_sentences
+from sbert_service import (
+    MODEL_DIRECTORY,
+    MODEL_NAME,
+    cosine_similarity,
+    embed_sentences,
+)
+
 from roberta_service import (
     MODEL_DIRECTORY as ROBERTA_MODEL_DIRECTORY,
     MODEL_NAME as ROBERTA_MODEL_NAME,
     cosine_similarity as roberta_cosine_similarity,
     embed_sentences as roberta_embed_sentences,
 )
-
 app = Flask(__name__)
 CORS(app)  # Allow cross-origin requests from the frontend dev server
 initialize_database()
