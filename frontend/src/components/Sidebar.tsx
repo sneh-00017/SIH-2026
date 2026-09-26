@@ -12,6 +12,7 @@ export default function Sidebar() {
         <NavLink to="/analysis"><span>◉</span>Image analysis</NavLink>
         <NavLink to="/video"><span>▶</span>Video detection</NavLink>
         <NavLink to="/history"><span>↺</span>History</NavLink>
+        <NavLink to="/team"><span>◎</span>About team</NavLink>
       </nav>
       <div className="side-footer"><span className="live-dot" />AI monitoring active</div>
     </aside>

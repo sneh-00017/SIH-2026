@@ -3,6 +3,7 @@ import HomePage from "./pages/HomePage";
 import HistoryPage from "./pages/HistoryPage";
 import DashboardPage from "./pages/DashboardPage";
 import VideoPage from "./pages/VideoPage";
+import TeamPage from "./pages/TeamPage";
 
 export default function App() {
   return (
@@ -12,6 +13,7 @@ export default function App() {
       <Route path="/analysis" element={<HomePage />} />
       <Route path="/video" element={<VideoPage />} />
       <Route path="/history" element={<HistoryPage />} />
+      <Route path="/team" element={<TeamPage />} />
       <Route path="/login" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );

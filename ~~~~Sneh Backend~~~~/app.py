@@ -10,6 +10,13 @@ from risk_engine import calculate_risk_from_flags
 from detector import detect_objects_stub
 from safety_pipeline import run_safety_pipeline
 from database import initialize_database, list_analyses, save_analysis
+from sbert_service import MODEL_DIRECTORY, MODEL_NAME, cosine_similarity, embed_sentences
+from roberta_service import (
+    MODEL_DIRECTORY as ROBERTA_MODEL_DIRECTORY,
+    MODEL_NAME as ROBERTA_MODEL_NAME,
+    cosine_similarity as roberta_cosine_similarity,
+    embed_sentences as roberta_embed_sentences,
+)
 
 app = Flask(__name__)
 CORS(app)  # Allow cross-origin requests from the frontend dev server
@@ -26,6 +33,100 @@ def health():
         "status": "ok",
         "message": "AI Risk Detector Backend is running!"
     }
+
+
+@app.route("/api/nlp/health")
+def nlp_health():
+    """Report whether the locally cached SBERT model is ready."""
+    return {
+        "status": "ok",
+        "model": MODEL_NAME,
+        "local_model_path": str(MODEL_DIRECTORY),
+        "cached": MODEL_DIRECTORY.exists(),
+        "embedding_dimensions": 384,
+    }
+
+
+@app.route("/api/nlp/embed", methods=["POST"])
+def nlp_embed():
+    """Return normalized 384-dimensional SBERT vectors for one or more sentences."""
+    data = request.get_json(silent=True) or {}
+    sentences = data.get("sentences")
+    if not isinstance(sentences, list) or not sentences or not all(isinstance(item, str) and item.strip() for item in sentences):
+        return jsonify({"error": "Provide a non-empty JSON array of strings in 'sentences'."}), 400
+    if len(sentences) > 64:
+        return jsonify({"error": "A maximum of 64 sentences may be embedded per request."}), 400
+    try:
+        return jsonify({
+            "model": MODEL_NAME,
+            "dimensions": 384,
+            "embeddings": embed_sentences(sentences),
+        })
+    except Exception as error:
+        return jsonify({"error": f"Could not load the local SBERT model: {error}"}), 503
+
+
+@app.route("/api/nlp/similarity", methods=["POST"])
+def nlp_similarity():
+    """Calculate semantic similarity between two sentences using local SBERT."""
+    data = request.get_json(silent=True) or {}
+    left, right = data.get("sentence_a"), data.get("sentence_b")
+    if not isinstance(left, str) or not left.strip() or not isinstance(right, str) or not right.strip():
+        return jsonify({"error": "Provide non-empty strings 'sentence_a' and 'sentence_b'."}), 400
+    try:
+        return jsonify({
+            "model": MODEL_NAME,
+            "similarity": round(cosine_similarity(left, right), 6),
+        })
+    except Exception as error:
+        return jsonify({"error": f"Could not load the local SBERT model: {error}"}), 503
+
+
+@app.route("/api/nlp/roberta/health")
+def roberta_health():
+    """Report whether the locally cached RoBERTa model is ready."""
+    return {
+        "status": "ok",
+        "model": ROBERTA_MODEL_NAME,
+        "local_model_path": str(ROBERTA_MODEL_DIRECTORY),
+        "cached": ROBERTA_MODEL_DIRECTORY.exists(),
+        "embedding_dimensions": 768,
+    }
+
+
+@app.route("/api/nlp/roberta/embed", methods=["POST"])
+def roberta_embed():
+    """Return normalized RoBERTa sentence embeddings."""
+    data = request.get_json(silent=True) or {}
+    sentences = data.get("sentences")
+    if not isinstance(sentences, list) or not sentences or not all(isinstance(item, str) and item.strip() for item in sentences):
+        return jsonify({"error": "Provide a non-empty JSON array of strings in 'sentences'."}), 400
+    if len(sentences) > 32:
+        return jsonify({"error": "A maximum of 32 sentences may be embedded per request."}), 400
+    try:
+        return jsonify({
+            "model": ROBERTA_MODEL_NAME,
+            "dimensions": 768,
+            "embeddings": roberta_embed_sentences(sentences),
+        })
+    except Exception as error:
+        return jsonify({"error": f"Could not load the local RoBERTa model: {error}"}), 503
+
+
+@app.route("/api/nlp/roberta/similarity", methods=["POST"])
+def roberta_similarity():
+    """Calculate semantic similarity between two sentences using local RoBERTa."""
+    data = request.get_json(silent=True) or {}
+    left, right = data.get("sentence_a"), data.get("sentence_b")
+    if not isinstance(left, str) or not left.strip() or not isinstance(right, str) or not right.strip():
+        return jsonify({"error": "Provide non-empty strings 'sentence_a' and 'sentence_b'."}), 400
+    try:
+        return jsonify({
+            "model": ROBERTA_MODEL_NAME,
+            "similarity": round(roberta_cosine_similarity(left, right), 6),
+        })
+    except Exception as error:
+        return jsonify({"error": f"Could not load the local RoBERTa model: {error}"}), 503
 
 
 @app.route("/api/analyses", methods=["GET"])
@@ -159,7 +260,8 @@ def analyze_video():
             writer = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*"mp4v"), fps, (width, height))
         if not writer.isOpened():
             return jsonify({"error": "The annotated video output could not be created."}), 500
-        sample_step = max(1, int(fps * 0.5))
+        # Analyze one frame per second while preserving every source frame in the output.
+        sample_step = max(1, int(round(fps)))
         best_result = None
         best_frame_image = None
         evidence_frames = []
