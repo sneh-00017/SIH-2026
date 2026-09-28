@@ -7,9 +7,11 @@ or OpenCV frame/ndarray.
 """
 
 from ultralytics import YOLO
+from pathlib import Path
 
 # 1. Load small pretrained YOLO model once at module import time (lightweight for beginner laptops)
-MODEL_NAME = "yolov8n.pt"
+MODEL_PATH = Path(__file__).resolve().parent / "yolov8n.pt"
+MODEL_NAME = str(MODEL_PATH)
 model = YOLO(MODEL_NAME)
 MIN_CONFIDENCE = 0.35
 
