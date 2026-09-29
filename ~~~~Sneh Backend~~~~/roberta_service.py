@@ -3,10 +3,6 @@
 from pathlib import Path
 from threading import Lock
 
-import torch
-from transformers import AutoModel, AutoTokenizer
-
-
 MODEL_NAME = "roberta-base"
 MODEL_DIRECTORY = Path(__file__).resolve().parent / "models" / "roberta-base"
 
@@ -21,6 +17,8 @@ def get_model_and_tokenizer():
     if _model is None or _tokenizer is None:
         with _model_lock:
             if _model is None or _tokenizer is None:
+                from transformers import AutoModel, AutoTokenizer
+
                 MODEL_DIRECTORY.parent.mkdir(parents=True, exist_ok=True)
                 source = str(MODEL_DIRECTORY) if MODEL_DIRECTORY.exists() else MODEL_NAME
                 _tokenizer = AutoTokenizer.from_pretrained(source, cache_dir=str(MODEL_DIRECTORY.parent))
@@ -34,6 +32,8 @@ def get_model_and_tokenizer():
 
 def embed_sentences(sentences: list[str]) -> list[list[float]]:
     """Mean-pool token vectors into normalized 768-dimensional text embeddings."""
+    import torch
+
     model, tokenizer = get_model_and_tokenizer()
     encoded = tokenizer(sentences, padding=True, truncation=True, max_length=512, return_tensors="pt")
     with torch.inference_mode():
@@ -45,5 +45,7 @@ def embed_sentences(sentences: list[str]) -> list[list[float]]:
 
 
 def cosine_similarity(left: str, right: str) -> float:
+    import torch
+
     embeddings = torch.tensor(embed_sentences([left, right]))
     return float(torch.dot(embeddings[0], embeddings[1]))

@@ -6,14 +6,28 @@ the `detect_objects(source)` function to run object detection on an image path
 or OpenCV frame/ndarray.
 """
 
-from ultralytics import YOLO
 from pathlib import Path
+from threading import Lock
 
-# 1. Load small pretrained YOLO model once at module import time (lightweight for beginner laptops)
+# Load the pretrained YOLO model on the first inference request.
 MODEL_PATH = Path(__file__).resolve().parent / "yolov8n.pt"
 MODEL_NAME = str(MODEL_PATH)
-model = YOLO(MODEL_NAME)
+model = None
+_model_lock = Lock()
 MIN_CONFIDENCE = 0.35
+
+
+def get_model():
+    """Load YOLO and its PyTorch runtime only when image inference is needed."""
+    global model
+
+    if model is None:
+        with _model_lock:
+            if model is None:
+                from ultralytics import YOLO
+
+                model = YOLO(MODEL_NAME)
+    return model
 
 
 def detect_objects(source):
@@ -27,14 +41,15 @@ def detect_objects(source):
              - x1, y1, x2, y2 (float): Bounding box coordinates
     """
     # Perform inference (verbose=False keeps console output clean)
-    results = model(source, conf=MIN_CONFIDENCE, iou=0.45, imgsz=640, verbose=False)
+    detector = get_model()
+    results = detector(source, conf=MIN_CONFIDENCE, iou=0.45, imgsz=640, device="cpu", verbose=False)
 
     detections = []
     for r in results:
         boxes = r.boxes
         for box in boxes:
             cls_id = int(box.cls[0].item())
-            class_name = model.names.get(cls_id, str(cls_id))
+            class_name = detector.names.get(cls_id, str(cls_id))
             confidence = round(float(box.conf[0].item()), 4)
             x1, y1, x2, y2 = box.xyxy[0].tolist()
 

@@ -3,6 +3,10 @@ flask-cors==5.0.0
 gunicorn==23.0.0
 numpy==2.1.1
 opencv-python-headless==4.10.0.84
+# Keep the matched CPU-only PyTorch pair ahead of Ultralytics' broad torch requirements.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.7.1+cpu
+torchvision==0.22.1+cpu
 ultralytics==8.3.70
 sentence-transformers==6.1.0
 transformers==5.17.0

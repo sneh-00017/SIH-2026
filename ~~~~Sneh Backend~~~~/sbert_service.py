@@ -4,10 +4,6 @@
 from pathlib import Path
 from threading import Lock
 
-import torch
-from transformers import AutoModel, AutoTokenizer
-
-
 MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 MODEL_DIRECTORY = Path(__file__).resolve().parent / "models" / "all-MiniLM-L6-v2"
 
@@ -23,6 +19,8 @@ def get_model_and_tokenizer():
     if _model is None or _tokenizer is None:
         with _model_lock:
             if _model is None or _tokenizer is None:
+                from transformers import AutoModel, AutoTokenizer
+
                 MODEL_DIRECTORY.parent.mkdir(parents=True, exist_ok=True)
                 source = str(MODEL_DIRECTORY) if MODEL_DIRECTORY.exists() else MODEL_NAME
 
@@ -43,6 +41,8 @@ def get_model_and_tokenizer():
 
 def embed_sentences(sentences: list[str]) -> list[list[float]]:
     """Create normalized 384-dimensional sentence embeddings."""
+    import torch
+
     model, tokenizer = get_model_and_tokenizer()
 
     encoded = tokenizer(
@@ -65,5 +65,7 @@ def embed_sentences(sentences: list[str]) -> list[list[float]]:
 
 def cosine_similarity(left: str, right: str) -> float:
     """Calculate cosine similarity between two sentences."""
+    import torch
+
     embeddings = torch.tensor(embed_sentences([left, right]))
     return float(torch.dot(embeddings[0], embeddings[1]))
